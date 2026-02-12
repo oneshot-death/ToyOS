@@ -32,6 +32,42 @@ static int hex_to_string(char *buffer, int position, uint64_t digits) {
 
 }
 
+static int udecimal_to_string(char *buffer,int position, uint64_t digits) {
+    char digits_map[10]="0123456789";
+    char digits_buffer[25];
+    int size=0;
+
+    do {
+        digits_buffer[size++]=digits_map[digits%10];
+        digits/=10;
+    }   while (digits!=0);
+
+    for (int i=size-1;i>=0;i--) {
+        buffer[position++]=digits_buffer[i];
+    }
+
+    return size;
+
+}
+
+static int decimal_to_string(char *buffer, int position, int64_t digits) {
+    int size=0;
+
+    if (digits<0) {
+        digits=-digits;
+        buffer[position++]='-';
+        size++;
+    }
+    size+=udecimal_to_string(buffer,position,(uint64_t)digits);
+    return size;
+}
+
+static void write_console(const char *buffer, int size) {
+    for (int i=0;i<size;i++) {
+        write_char(buffer[i]);
+    }
+}
+
 int printk(const char *format, ...) {
     char buffer[1024]; //ensure that the value printed is not larger than thisx
     int buffer_size=0;
@@ -51,8 +87,12 @@ int printk(const char *format, ...) {
                     buffer_size+= hex_to_string(buffer,buffer_size,(uint64_t)integer)
                     break;
                 case 'u':
+                    integer= va_arg(args, int64_t);
+                    buffer+=udecimal_to_string(buffer,buffer_size,(uint64_t)integer)
                     break;
                 case 'd':
+                    integer=va_arg(args,int64_t);
+                    buffer_size+=decimal_to_string(buffer,buffer_size,integer);
                     break;
                 case 's':
                     string= va_arg(args,char*);
@@ -64,4 +104,8 @@ int printk(const char *format, ...) {
             } 
         }
     }
+    write_console(buffer,buffer_size);
+    va_end(args);
+
+    return buffer_size;
 }
